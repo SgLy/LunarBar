@@ -34,11 +34,9 @@ final class WeekdayView: NSStackView {
     for index in 0..<shortSymbols.count {
       let label = TextLabel()
       label.alignment = .center
-      label.textColor = Colors.primaryLabel
+      label.textColor = weekendIndices.contains(index) ? Colors.controlAccent : Colors.primaryLabel
       label.font = .mediumSystemFont(ofSize: Constants.fontSize)
       label.stringValue = shortSymbols[index]
-
-      label.alphaValue = weekendIndices.contains(index) ? AlphaLevels.secondary : AlphaLevels.primary
       label.setAccessibilityLabel(fullSymbols[index])
 
       addArrangedSubview(label)

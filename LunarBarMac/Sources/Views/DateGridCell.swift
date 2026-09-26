@@ -82,14 +82,6 @@ final class DateGridCell: NSCollectionViewItem {
 
     return view
   }()
-
-  private let holidayView: NSImageView = {
-    let view = NSImageView(image: Constants.holidayViewImage)
-    view.isHidden = true
-    view.setAccessibilityHidden(true)
-
-    return view
-  }()
 }
 
 // MARK: - Life Cycle
@@ -182,18 +174,19 @@ extension DateGridCell {
     // Reload event dot views
     eventView.updateEvents(cellEvents)
 
-    // Bookmark for holiday plans
+    // Only the date number is tinted, the lunar text keeps the regular label color
+    let isRestDay: Bool
     switch holidayType {
-    case .none:
-      holidayView.isHidden = true
-      holidayView.contentTintColor = nil
-    case .workday:
-      holidayView.isHidden = false
-      holidayView.contentTintColor = Colors.systemOrange
     case .holiday:
-      holidayView.isHidden = false
-      holidayView.contentTintColor = Colors.systemTeal
+      isRestDay = true
+    case .workday:
+      isRestDay = false
+    case .none:
+      isRestDay = Calendar.solar.isDateInWeekend(cellDate)
     }
+
+    solarLabel.textColor = isRestDay ? Colors.controlAccent : Colors.primaryLabel
+    lunarLabel.textColor = Colors.primaryLabel
 
     self.mainInfo = {
       var components: [String] = []
@@ -240,20 +233,13 @@ extension DateGridCell {
   }
 
   func updateOpacity(monthDate: Date?) {
-    let currentDate = Date.now
-    let cellDate = cellDate ?? currentDate
-
+    let cellDate = cellDate ?? Date.now
     let solarComponents = Calendar.solar.dateComponents([.month], from: cellDate)
-    let isDateToday = Calendar.solar.isDate(cellDate, inSameDayAs: currentDate)
 
+    // Dates that belong to the previous or next month are dimmed,
+    // workday or not is expressed by color only
     if let monthDate, Calendar.solar.month(from: monthDate) == solarComponents.month {
-      if Calendar.solar.isDateInWeekend(cellDate) && !isDateToday {
-        solarLabel.alphaValue = AlphaLevels.secondary
-      } else {
-        solarLabel.alphaValue = AlphaLevels.primary
-      }
-
-      // Intentional, secondary alpha is used only for labels at weekends
+      solarLabel.alphaValue = AlphaLevels.primary
       eventView.alphaValue = AlphaLevels.primary
     } else {
       solarLabel.alphaValue = AlphaLevels.tertiary
@@ -261,7 +247,6 @@ extension DateGridCell {
     }
 
     lunarLabel.alphaValue = solarLabel.alphaValue
-    holidayView.alphaValue = eventView.alphaValue
   }
 
   @discardableResult
@@ -279,7 +264,6 @@ private extension DateGridCell {
     static let lunarFontSize: Double = FontSizes.small
     static let eventViewHeight: Double = 10
     static let focusRingBorderWidth: Double = 2
-    static let holidayViewImage: NSImage = .with(symbolName: Icons.bookmarkFill, pointSize: 9)
     static let lunarDateFormatter: DateFormatter = .lunarDate
   }
 
@@ -340,15 +324,6 @@ private extension DateGridCell {
       focusRingView.trailingAnchor.constraint(equalTo: highlightView.trailingAnchor),
       focusRingView.topAnchor.constraint(equalTo: highlightView.topAnchor),
       focusRingView.bottomAnchor.constraint(equalTo: highlightView.bottomAnchor),
-    ])
-
-    holidayView.translatesAutoresizingMaskIntoConstraints = false
-    containerView.addSubview(holidayView)
-    NSLayoutConstraint.activate([
-      holidayView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: -3.5),
-      holidayView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -1.5),
-      holidayView.widthAnchor.constraint(equalToConstant: holidayView.frame.width),
-      holidayView.heightAnchor.constraint(equalToConstant: holidayView.frame.height),
     ])
 
     let longPressRecognizer = NSPressGestureRecognizer(target: self, action: #selector(onLongPress(_:)))
